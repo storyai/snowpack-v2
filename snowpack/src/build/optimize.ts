@@ -404,9 +404,8 @@ async function processEntrypoints(
 async function runEsbuildOnBuildDirectory(
   bundleEntrypoints: string[],
   config: SnowpackConfig,
-  esbuildService: esbuild.Service,
 ): Promise<{manifest: ESBuildMetaManifest; outputFiles: esbuild.OutputFile[]}> {
-  const {outputFiles, warnings} = await esbuildService.build({
+  const {outputFiles, warnings} = await esbuild.build({
     entryPoints: bundleEntrypoints,
     outdir: FAKE_BUILD_DIRECTORY,
     outbase: config.buildOptions.out,
@@ -415,7 +414,7 @@ async function runEsbuildOnBuildDirectory(
     splitting: true,
     format: 'esm',
     platform: 'browser',
-    metafile: path.join(config.buildOptions.out, 'build-manifest.json'),
+    metafile: true, // path.join(config.buildOptions.out, 'build-manifest.json'),
     publicPath: config.buildOptions.baseUrl,
     minify: config.experiments.optimize!.minify,
     target: config.experiments.optimize!.target,
@@ -507,11 +506,9 @@ export async function runBuiltInOptimize(config: SnowpackConfig) {
   // * Run esbuild on the entire build directory. Even if you are not writing the result
   // to disk (bundle: false), we still use the bundle manifest as an in-memory representation
   // of our import graph, saved to disk.
-  const esbuildService = await esbuild.startService();
   const {manifest, outputFiles} = await runEsbuildOnBuildDirectory(
     bundleEntrypoints,
     config,
-    esbuildService,
   );
 
   // * BUNDLE: TRUE - Save the bundle result to the build directory, and clean up to remove all original
@@ -544,7 +541,7 @@ export async function runBuiltInOptimize(config: SnowpackConfig) {
     for (const f of allBuildFiles) {
       if (['.js', '.css'].includes(path.extname(f))) {
         let code = await fs.readFile(f, 'utf-8');
-        const minified = await esbuildService.transform(code, {
+        const minified = await esbuild.transform(code, {
           sourcefile: path.basename(f),
           loader: path.extname(f).slice(1) as 'js' | 'css',
           minify: options.minify,
@@ -602,7 +599,6 @@ export async function runBuiltInOptimize(config: SnowpackConfig) {
   }
 
   // Cleanup and exit.
-  esbuildService.stop();
   process.chdir(originalCwd);
   return;
 }

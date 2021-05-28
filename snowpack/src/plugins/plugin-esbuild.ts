@@ -1,11 +1,9 @@
-import {Service, startService} from 'esbuild';
+import * as esbuild from 'esbuild';
 import * as colors from 'kleur/colors';
 import path from 'path';
 import {promises as fs} from 'fs';
 import {SnowpackPlugin, SnowpackConfig} from '../types/snowpack';
 import {logger} from '../logger';
-
-let esbuildService: Service | null = null;
 
 const IS_PREACT = /from\s+['"]preact['"]/;
 function checkIsPreact(filePath: string, contents: string) {
@@ -28,12 +26,11 @@ export function esbuildPlugin(config: SnowpackConfig, {input}: {input: string[]}
       output: ['.js'],
     },
     async load({filePath}) {
-      esbuildService = esbuildService || (await startService());
       const contents = await fs.readFile(filePath, 'utf-8');
       const isPreact = checkIsPreact(filePath, contents);
       let jsxFactory = config.buildOptions.jsxFactory ?? (isPreact ? 'h' : undefined);
       let jsxFragment = config.buildOptions.jsxFragment ?? (isPreact ? 'Fragment' : undefined);
-      const {code, map, warnings} = await esbuildService!.transform(contents, {
+      const {code, map, warnings} = await esbuild.transform(contents, {
         loader: getLoader(filePath),
         jsxFactory,
         jsxFragment,
@@ -52,7 +49,7 @@ export function esbuildPlugin(config: SnowpackConfig, {input}: {input: string[]}
       };
     },
     cleanup() {
-      esbuildService && esbuildService.stop();
+      // no cleanup necessary
     },
   };
 }
