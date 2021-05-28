@@ -11,10 +11,10 @@ import mkdirp from 'mkdirp';
 import open from 'open';
 import path from 'path';
 import rimraf from 'rimraf';
-import {clearCache as clearSkypackCache} from 'skypack';
 import url from 'url';
 import localPackageSource from './sources/local';
-import skypackPackageSource from './sources/skypack';
+// import {clearCache as clearSkypackCache} from 'skypack';
+// import skypackPackageSource from './sources/skypack';
 import {LockfileManifest, PackageSource, SnowpackConfig} from './types/snowpack';
 
 export const GLOBAL_CACHE_DIR = globalCacheDir('snowpack');
@@ -82,8 +82,8 @@ export function isTruthy<T>(item: T | false | null | undefined): item is T {
   return Boolean(item);
 }
 
-export function getPackageSource(source: 'skypack' | 'local'): PackageSource {
-  return source === 'local' ? localPackageSource : skypackPackageSource;
+export function getPackageSource(_source: 'local'): PackageSource {
+  return localPackageSource;
 }
 
 /** Get the package name + an entrypoint within that package (if given). */
@@ -256,7 +256,7 @@ export async function updateLockfileHash(dir: string) {
 
 export async function clearCache() {
   return Promise.all([
-    clearSkypackCache(),
+    // clearSkypackCache(),
     cacache.rm.all(BUILD_CACHE),
     rimraf.sync(PROJECT_CACHE_DIR),
   ]);

@@ -257,7 +257,7 @@ export interface SnowpackConfig {
   /** EXPERIMENTAL - This section is experimental and not yet finalized. May change across minor versions. */
   experiments: {
     /** (EXPERIMENTAL) Where should dependencies be loaded from? */
-    source: 'local' | 'skypack';
+    source: 'local' /* | 'skypack' */;
     /** (EXPERIMENTAL) If true, "snowpack build" should build your site for SSR. */
     ssr: boolean;
     /** (EXPERIMENTAL) Custom request handler for the dev server. */

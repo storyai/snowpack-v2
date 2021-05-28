@@ -229,11 +229,17 @@ function addNewBundledCss(
     const hasCssImportAlready = htmlData
       .getLinks('stylesheet')
       .toArray()
-      .some((v) => v.attribs.href.includes(removeLeadingSlash(key)));
+      .some((v) => {
+        assertTagElement(v);
+        return v.attribs.href.includes(removeLeadingSlash(key));
+      });
     const hasScriptImportAlready = htmlData
       .getScripts()
       .toArray()
-      .some((v) => v.attribs.src.includes(removeLeadingSlash(scriptKey)));
+      .some((v) => {
+        assertTagElement(v);
+        return v.attribs.src.includes(removeLeadingSlash(scriptKey));
+      });
 
     if (hasCssImportAlready || !hasScriptImportAlready) {
       continue;
@@ -253,7 +259,10 @@ function preloadEntrypoint(
 ): void {
   const {root, getScripts} = htmlData;
   const preloadScripts = getScripts()
-    .map((_, elem) => elem.attribs.src)
+    .map((_, elem) => {
+      assertTagElement(elem);
+      return elem.attribs.src;
+    })
     .get()
     .filter(isTruthy);
   const collectedDeepImports = new Set<string>();
@@ -369,6 +378,7 @@ async function processEntrypoints(
     const bundleEntrypoints = Array.from(
       htmlEntrypoints.reduce((all, val) => {
         val.getLinks('stylesheet').each((_, elem) => {
+          assertTagElement(elem);
           if (!elem.attribs.href || isRemoteUrl(elem.attribs.href)) {
             return;
           }
@@ -379,6 +389,7 @@ async function processEntrypoints(
           all.add(resolvedCSS);
         });
         val.getScripts().each((_, elem) => {
+          assertTagElement(elem);
           if (!elem.attribs.src || isRemoteUrl(elem.attribs.src)) {
             return;
           }
@@ -395,6 +406,10 @@ async function processEntrypoints(
   }
   // If entrypoints are mixed or neither, throw an error.
   throw new Error('MIXED ENTRYPOINTS: ' + entrypointFiles);
+}
+
+function assertTagElement(x: cheerio.Element): asserts x is cheerio.TagElement {
+  if (x.type === 'comment' || x.type === 'text') throw new Error(`Unexpected cheerio element`);
 }
 
 /**
@@ -506,10 +521,7 @@ export async function runBuiltInOptimize(config: SnowpackConfig) {
   // * Run esbuild on the entire build directory. Even if you are not writing the result
   // to disk (bundle: false), we still use the bundle manifest as an in-memory representation
   // of our import graph, saved to disk.
-  const {manifest, outputFiles} = await runEsbuildOnBuildDirectory(
-    bundleEntrypoints,
-    config,
-  );
+  const {manifest, outputFiles} = await runEsbuildOnBuildDirectory(bundleEntrypoints, config);
 
   // * BUNDLE: TRUE - Save the bundle result to the build directory, and clean up to remove all original
   // build files that now live in the bundles.
