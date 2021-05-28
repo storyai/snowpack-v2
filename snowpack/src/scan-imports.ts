@@ -1,3 +1,4 @@
+// @ts-ignore I'm not sure why TypeScript can't find this module...
 import {ImportSpecifier, init as initESModuleLexer, parse} from 'es-module-lexer';
 import {InstallTarget} from 'esinstall';
 import glob from 'glob';
