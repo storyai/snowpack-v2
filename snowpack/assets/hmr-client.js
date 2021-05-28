@@ -1,29 +1,33 @@
+// @ts-check
 /**
  * esm-hmr/runtime.ts
  * A client-side implementation of the ESM-HMR spec, for reference.
  */
 
-const isWindowDefined = typeof window !== 'undefined';
+const ENABLE_ERROR_OVERLAY = false;
+
+/** This script is executing on a page */
+const isDocumentDefined = typeof window !== 'undefined' && window.document != null;
 
 function log(...args) {
   console.log('[ESM-HMR]', ...args);
 }
 function reload() {
-  if (!isWindowDefined) {
+  if (!isDocumentDefined) {
     return;
   }
   location.reload(true);
 }
 /** Clear all error overlays from the page */
 function clearErrorOverlay() {
-  if (!isWindowDefined) {
+  if (!isDocumentDefined) {
     return;
   }
   document.querySelectorAll('hmr-error-overlay').forEach((el) => el.remove());
 }
 /** Create an error overlay (if custom element exists on the page). */
 function createNewErrorOverlay(data) {
-  if (!isWindowDefined) {
+  if (!isDocumentDefined) {
     return;
   }
   const HmrErrorOverlay = customElements.get('hmr-error-overlay');
@@ -46,10 +50,10 @@ function sendSocketMessage(msg) {
   }
 }
 
-let socketURL = isWindowDefined && window.HMR_WEBSOCKET_URL;
+let socketURL = isDocumentDefined && window.HMR_WEBSOCKET_URL;
 if (!socketURL) {
   const socketHost =
-    isWindowDefined && window.HMR_WEBSOCKET_PORT
+    isDocumentDefined && window.HMR_WEBSOCKET_PORT
       ? `${location.hostname}:${window.HMR_WEBSOCKET_PORT}`
       : location.host;
   socketURL = (location.protocol === 'http:' ? 'ws://' : 'wss://') + socketHost + '/';
@@ -62,6 +66,10 @@ socket.addEventListener('open', () => {
 });
 const REGISTERED_MODULES = {};
 class HotModuleState {
+  /**
+   *
+   * @param {string} id
+   */
   constructor(id) {
     this.data = {};
     this.isLocked = false;
@@ -113,6 +121,11 @@ class HotModuleState {
     });
   }
 }
+/**
+ *
+ * @param {string} fullUrl
+ * @returns {HotModuleState}
+ */
 export function createHotContext(fullUrl) {
   const id = new URL(fullUrl).pathname;
   const existing = REGISTERED_MODULES[id];
@@ -128,6 +141,7 @@ export function createHotContext(fullUrl) {
 
 /** Called when any CSS file is loaded. */
 async function runCssStyleAccept({url: id}) {
+  if (!isDocumentDefined) return true; // cannot update styles if there's no document (like in a web worker)
   const nonce = Date.now();
   const oldLinkEl =
     document.head.querySelector(`link[data-hmr="${id}"]`) ||
@@ -146,7 +160,7 @@ async function runCssStyleAccept({url: id}) {
     () => setTimeout(() => document.head.removeChild(oldLinkEl), 30),
     false,
   );
-  oldLinkEl.parentNode.insertBefore(linkEl, oldLinkEl)
+  oldLinkEl.parentNode.insertBefore(linkEl, oldLinkEl);
   return true;
 }
 
@@ -235,23 +249,24 @@ socket.addEventListener('message', ({data: _data}) => {
 log('listening for file changes...');
 
 /** Runtime error reporting: If a runtime error occurs, show it in an overlay. */
-isWindowDefined && window.addEventListener('error', function (event) {
-  // Generate an "error location" string
-  let fileLoc;
-  if (event.filename) {
-    fileLoc = event.filename;
-    if (event.lineno !== undefined) {
-      fileLoc += ` [:${event.lineno}`;
-      if (event.colno !== undefined) {
-        fileLoc += `:${event.colno}`;
+if (ENABLE_ERROR_OVERLAY && isDocumentDefined)
+  window.addEventListener('error', function (event) {
+    // Generate an "error location" string
+    let fileLoc;
+    if (event.filename) {
+      fileLoc = event.filename;
+      if (event.lineno !== undefined) {
+        fileLoc += ` [:${event.lineno}`;
+        if (event.colno !== undefined) {
+          fileLoc += `:${event.colno}`;
+        }
+        fileLoc += `]`;
       }
-      fileLoc += `]`;
     }
-  }
-  createNewErrorOverlay({
-    title: 'Unhandled Runtime Error',
-    fileLoc,
-    errorMessage: event.message,
-    errorStackTrace: event.error ? event.error.stack : undefined,
+    createNewErrorOverlay({
+      title: 'Unhandled Runtime Error',
+      fileLoc,
+      errorMessage: event.message,
+      errorStackTrace: event.error ? event.error.stack : undefined,
+    });
   });
-});
