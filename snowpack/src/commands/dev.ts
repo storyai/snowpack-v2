@@ -95,6 +95,13 @@ interface FoundFile {
 }
 
 const FILE_BUILD_RESULT_ERROR = `Build Result Error: There was a problem with a file build result.`;
+const PERMISSIVE_HEADERS = {
+  'X-Permissive-Headers': '3',
+  'Access-Control-Allow-Origin': '*',
+  // Following needed for WASM shared memory threads
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+};
 
 /**
  * If encoding is defined, return a string. Otherwise, return a Buffer.
@@ -160,7 +167,7 @@ function sendResponseFile(
   const ETag = etag(body, {weak: true});
   const headers: Record<string, string> = {
     'Accept-Ranges': 'bytes',
-    'Access-Control-Allow-Origin': '*',
+    ...PERMISSIVE_HEADERS,
     'Content-Type': contentType || 'application/octet-stream',
     ETag,
     Vary: 'Accept-Encoding',
@@ -229,7 +236,7 @@ function sendResponseFile(
 function sendResponseError(req: http.IncomingMessage, res: http.ServerResponse, status: number) {
   const contentType = mime.contentType(path.extname(req.url!) || '.html');
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Origin': '*',
+    ...PERMISSIVE_HEADERS,
     'Accept-Ranges': 'bytes',
     'Content-Type': contentType || 'application/octet-stream',
     Vary: 'Accept-Encoding',
@@ -1150,7 +1157,7 @@ export async function startDevServer(commandOptions: CommandOptions): Promise<Sn
     const quickETagCheckUrl = reqUrl.replace(/\/$/, '/index.html');
     if (quickETagCheck && quickETagCheck === knownETags.get(quickETagCheckUrl)) {
       logger.debug(`optimized etag! sending 304...`);
-      res.writeHead(304, {'Access-Control-Allow-Origin': '*'});
+      res.writeHead(304, PERMISSIVE_HEADERS);
       res.end();
       return;
     }
