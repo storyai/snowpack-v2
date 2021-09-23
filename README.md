@@ -1,3 +1,8 @@
+storyai has forked snowpack, because of two reasons:
+
+ 1. Snowpack 3 has a different ordering for how modules are resolved which make it impossible to properly build two separate pipelines concurrently [See issue](https://github.com/snowpackjs/snowpack/issues/3289)
+ 2. We could not find how to customize headers for snowpack 2 dev server which were needed to support multi-threaded WASM.
+
 <p><a href="https://osawards.com/javascript/2020">
   <img src="https://www.snowpack.dev/img/JSAwardWinner.png"   />
 </a></p>
